@@ -48,6 +48,30 @@ describe('classifySource', () => {
   it('throws for malformed URLs', () => {
     expect(() => classifySource('https://')).toThrow();
   });
+
+  it('rejects relative paths with a clear message', () => {
+    expect(() => classifySource('song.mp3')).toThrow(/Relative paths are not supported/);
+  });
+
+  it('rejects ./ relative paths', () => {
+    expect(() => classifySource('./songs/track.mp3')).toThrow(/Relative paths are not supported/);
+  });
+
+  it('rejects ../ relative paths', () => {
+    expect(() => classifySource('../Music/song.wav')).toThrow(/Relative paths are not supported/);
+  });
+
+  it('rejects file:// URIs with a hint to use a plain path', () => {
+    expect(() => classifySource('file:///Users/me/song.mp3')).toThrow(/file:\/\/ URIs are not/);
+  });
+
+  it('accepts bare ~ as a home path', () => {
+    expect(classifySource('~').kind).toBe('local');
+  });
+
+  it('relative-path error includes a suggestion to ask the user', () => {
+    expect(() => classifySource('song.mp3')).toThrow(/ask the user/);
+  });
 });
 
 describe('validateOptions', () => {

@@ -6,6 +6,7 @@ import { Readable } from 'node:stream';
 import type { StemSplitClient } from './client.js';
 import { expandHome } from './config.js';
 import { StemSplitError } from './errors.js';
+import { withRetry } from './retry.js';
 import {
   MAX_FILE_SIZE_BYTES,
   MAX_FILE_SIZE_MB,
@@ -97,10 +98,39 @@ export async function uploadLocalFile(
 
   const presigned = await client.requestUpload(fileName, contentType);
 
-  const nodeStream = createReadStream(absolutePath);
-  const webStream = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
-
-  await client.uploadToPresignedUrl(presigned.uploadUrl, webStream, contentType, stats.size);
+  // Wrap the streaming PUT in retry. A web ReadableStream can only be
+  // consumed once, so each attempt opens a fresh node read stream and
+  // converts it. Retries cover transient R2/network blips.
+  await withRetry(
+    () => {
+      const nodeStream = createReadStream(absolutePath);
+      const webStream = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
+      return client.uploadToPresignedUrl(
+        presigned.uploadUrl,
+        webStream,
+        contentType,
+        stats.size,
+      );
+    },
+    {
+      maxAttempts: 3,
+      initialDelayMs: 2000,
+      maxDelayMs: 30_000,
+      shouldRetry: (err) => {
+        if (!(err instanceof StemSplitError)) return false;
+        if (err.code === 'UPLOAD_NETWORK_ERROR') return true;
+        // Retry on R2 5xx but not on 403 (signature expired) or 4xx.
+        if (err.httpStatus >= 500 && err.httpStatus < 600) return true;
+        return false;
+      },
+      onRetry: (err, attempt, delayMs) => {
+        const message = err instanceof Error ? err.message : String(err);
+        process.stderr.write(
+          `[stemsplit-mcp] retry upload attempt ${attempt} in ${delayMs}ms (${message})\n`,
+        );
+      },
+    },
+  );
 
   return {
     uploadKey: presigned.uploadKey,

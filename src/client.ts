@@ -1,5 +1,6 @@
 import type { Config } from './config.js';
 import { buildErrorFromResponse, StemSplitError } from './errors.js';
+import { withRetry, type RetryDecision } from './retry.js';
 import type {
   ApiErrorBody,
   BalanceResponse,
@@ -23,10 +24,46 @@ export interface CreateJobInput {
   metadata?: Record<string, unknown>;
 }
 
+interface RequestOptions {
+  /**
+   * Whether this call has irreversible server-side side effects. Mutating
+   * calls only retry on network errors (server never saw the request);
+   * non-mutating calls also retry on 5xx. Defaults to true for POST.
+   */
+  mutating?: boolean;
+}
+
+export function shouldRetryApiError(err: unknown, mutating: boolean): RetryDecision {
+  if (!(err instanceof StemSplitError)) return false;
+
+  // Connection-level failures (DNS, ECONNRESET, abort, timeouts). The
+  // server never accepted the request, so retrying is always safe.
+  if (err.code === 'NETWORK_ERROR') return true;
+
+  // 5xx: the server received the request and may have applied side
+  // effects (e.g. created a billable job) before failing. Only safe
+  // to replay for idempotent calls.
+  if (err.httpStatus >= 500 && err.httpStatus < 600) {
+    return !mutating;
+  }
+
+  // 429: rate limited. Honor Retry-After if present, otherwise back off.
+  if (err.httpStatus === 429) {
+    const retryAfter = err.data.retryAfterSeconds;
+    if (typeof retryAfter === 'number' && retryAfter > 0) {
+      return { retryAfterMs: retryAfter * 1000 };
+    }
+    return true;
+  }
+
+  // 4xx other than 429: user/auth error, not transient.
+  return false;
+}
+
 export class StemSplitClient {
   constructor(private readonly config: Config) {}
 
-  private async request<T>(
+  private async requestOnce<T>(
     method: 'GET' | 'POST',
     path: string,
     body?: unknown,
@@ -74,14 +111,44 @@ export class StemSplitClient {
     return (await response.json()) as T;
   }
 
+  private async request<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+    opts?: RequestOptions,
+  ): Promise<T> {
+    const mutating = opts?.mutating ?? method === 'POST';
+    return withRetry(() => this.requestOnce<T>(method, path, body), {
+      maxAttempts: mutating ? 3 : 4,
+      initialDelayMs: 1000,
+      maxDelayMs: 30_000,
+      shouldRetry: (err) => shouldRetryApiError(err, mutating),
+      onRetry: (err, attempt, delayMs) => {
+        const message = err instanceof Error ? err.message : String(err);
+        process.stderr.write(
+          `[stemsplit-mcp] retry ${attempt} for ${method} ${path} in ${delayMs}ms (${message})\n`,
+        );
+      },
+    });
+  }
+
   async getBalance(): Promise<BalanceResponse> {
     return this.request<BalanceResponse>('GET', '/balance');
   }
 
   async requestUpload(filename: string, contentType?: string): Promise<UploadResponse> {
-    return this.request<UploadResponse>('POST', '/upload', { filename, contentType });
+    // Creating a presigned URL has no persistent side effects, so let
+    // the safe-call retry policy apply even though the method is POST.
+    return this.request<UploadResponse>('POST', '/upload', { filename, contentType }, {
+      mutating: false,
+    });
   }
 
+  /**
+   * Streams a single body to a presigned R2 URL. Callers that want
+   * automatic retry must pass a `bodyFactory` so each attempt gets a
+   * fresh stream (web ReadableStreams cannot be replayed once consumed).
+   */
   async uploadToPresignedUrl(
     uploadUrl: string,
     body: ReadableStream<Uint8Array> | Buffer | Blob,

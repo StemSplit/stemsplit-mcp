@@ -1,6 +1,6 @@
 {
   "name": "stemsplit-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for AI stem separation — remove vocals, isolate instrumentals, build karaoke tracks, or split audio into vocals, drums, bass, piano, guitar, and other stems from local files or YouTube URLs. Works in Claude Desktop, Cursor, Cline, Windsurf, Zed, and any Model Context Protocol client. Powered by StemSplit and Demucs.",
   "license": "MIT",
   "author": "StemSplit",

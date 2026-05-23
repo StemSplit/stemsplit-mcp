@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { StemSplitClient } from '../src/client.js';
 import type { Config } from '../src/config.js';
-import { StemSplitError } from '../src/errors.js';
 
 const config: Config = {
   apiKey: 'sk_live_test',
@@ -72,28 +71,53 @@ describe('StemSplitClient', () => {
     });
   });
 
-  it('attaches Retry-After to 429 errors', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+  it('retries 429 responses and eventually succeeds', async () => {
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    // First call: 429 with retry-after: 0 (zero delay so the test runs fast)
+    fetchMock.mockResolvedValueOnce(
       mockFetchResponse(
         { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Slow down.' } },
-        { status: 429, headers: { 'retry-after': '7' } },
+        { status: 429, headers: { 'retry-after': '0' } },
       ),
+    );
+    // Second call: success
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        balanceSeconds: 60,
+        balanceMinutes: 1,
+        balanceFormatted: '1 minute',
+        updatedAt: '2026-01-01T00:00:00Z',
+      }),
     );
 
     const client = new StemSplitClient(config);
-    try {
-      await client.getBalance();
-      throw new Error('expected to throw');
-    } catch (err) {
-      expect(err).toBeInstanceOf(StemSplitError);
-      expect((err as StemSplitError).data.retryAfterSeconds).toBe(7);
-    }
+    const balance = await client.getBalance();
+
+    expect(balance.balanceMinutes).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('wraps network errors as NETWORK_ERROR', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('econnreset'));
+  it(
+    'wraps network errors as NETWORK_ERROR and surfaces after retries are exhausted',
+    async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('econnreset'));
+      const client = new StemSplitClient(config);
+      await expect(client.getBalance()).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+      // GET retries up to 4 attempts total
+      expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(4);
+    },
+    { timeout: 20_000 },
+  );
+
+  it('does not retry 5xx for POST (mutating) calls', async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockFetchResponse({ error: { code: 'INTERNAL', message: 'oops' } }, { status: 500 }),
+    );
     const client = new StemSplitClient(config);
-    await expect(client.getBalance()).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+    await expect(
+      client.createJob({ sourceUrl: 'https://a.example.com/b.mp3' }),
+    ).rejects.toMatchObject({ httpStatus: 500 });
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
   });
 
   it('builds query string for list_jobs', async () => {

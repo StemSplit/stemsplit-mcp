@@ -7,6 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import type { StemSplitClient } from './client.js';
 import { expandHome } from './config.js';
 import { StemSplitError } from './errors.js';
+import { withRetry } from './retry.js';
 import type {
   OutputFormat,
   StemKey,
@@ -41,7 +42,7 @@ function extensionFor(url: string, format?: OutputFormat): string {
   return '.mp3';
 }
 
-async function downloadOne(url: string, destPath: string): Promise<void> {
+async function downloadOnce(url: string, destPath: string): Promise<void> {
   let response: Response;
   try {
     response = await fetch(url);
@@ -70,6 +71,28 @@ async function downloadOne(url: string, destPath: string): Promise<void> {
 
   const reader = Readable.fromWeb(response.body as never);
   await pipeline(reader, createWriteStream(destPath));
+}
+
+async function downloadOne(url: string, destPath: string): Promise<void> {
+  return withRetry(() => downloadOnce(url, destPath), {
+    maxAttempts: 3,
+    initialDelayMs: 1000,
+    maxDelayMs: 15_000,
+    shouldRetry: (err) => {
+      if (!(err instanceof StemSplitError)) return false;
+      if (err.code === 'DOWNLOAD_NETWORK_ERROR') return true;
+      // Retry R2 5xx; do NOT retry 403 (signature expired) — the caller
+      // should re-fetch a fresh presigned URL via get_job / download_stems.
+      if (err.httpStatus >= 500 && err.httpStatus < 600) return true;
+      return false;
+    },
+    onRetry: (err, attempt, delayMs) => {
+      const message = err instanceof Error ? err.message : String(err);
+      process.stderr.write(
+        `[stemsplit-mcp] retry download attempt ${attempt} in ${delayMs}ms (${message})\n`,
+      );
+    },
+  });
 }
 
 export async function downloadStemOutputs(

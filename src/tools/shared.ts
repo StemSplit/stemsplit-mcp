@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { z } from 'zod';
 
 import type { StemSplitClient } from '../client.js';
@@ -40,6 +40,10 @@ export interface SourceClassification {
 const YOUTUBE_HOST_PATTERN =
   /(?:^|\.)(?:youtube\.com|youtu\.be|youtube-nocookie\.com|m\.youtube\.com)$/i;
 
+function isTildeHome(path: string): boolean {
+  return path === '~' || path.startsWith('~/');
+}
+
 export function classifySource(source: string): SourceClassification {
   const trimmed = source.trim();
   if (!trimmed) {
@@ -59,6 +63,27 @@ export function classifySource(source: string): SourceClassification {
       );
     }
     return { kind: 'url', value: trimmed };
+  }
+
+  // file:// URIs aren't supported because R2 presigned uploads need the
+  // raw file bytes from disk, not a URL fetch. Surface this clearly.
+  if (trimmed.startsWith('file://')) {
+    throw new Error(
+      'file:// URIs are not supported. Pass the absolute filesystem path instead (e.g. /Users/you/Music/song.mp3).',
+    );
+  }
+
+  // Local path: require absolute or tilde-anchored to home so relative
+  // paths don't silently resolve against the MCP server's cwd (which
+  // for Claude Desktop / Cursor is usually a system root the LLM has
+  // no way to know about). A clear error here is much friendlier than
+  // a downstream "File not found: /song.mp3".
+  if (!isTildeHome(trimmed) && !isAbsolute(trimmed)) {
+    throw new Error(
+      `Relative paths are not supported (got "${trimmed}"). ` +
+        `Pass an absolute path like "/Users/you/Music/song.mp3" or a home-anchored path like "~/Music/song.mp3". ` +
+        `If you do not know the absolute path, ask the user for it before retrying.`,
+    );
   }
 
   return { kind: 'local', value: trimmed };

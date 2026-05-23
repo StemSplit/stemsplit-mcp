@@ -47,7 +47,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     baseUrl,
     defaultOutputDir,
     serverName: 'stemsplit-mcp',
-    serverVersion: '0.1.0',
+    serverVersion: '0.2.0',
   };
 }
 
