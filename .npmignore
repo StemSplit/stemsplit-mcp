@@ -1,0 +1,13 @@
+src/
+tests/
+.github/
+tsconfig.json
+.eslintrc.cjs
+.prettierrc.json
+**/*.ts
+!dist/**
+PUBLISH.md
+.env
+.env.local
+coverage/
+.vitest-cache/

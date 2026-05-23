@@ -1,0 +1,66 @@
+{
+  "name": "stemsplit-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for StemSplit — separate vocals, drums, bass, and other stems from audio files or YouTube URLs inside Claude Desktop, Cursor, and any MCP client.",
+  "license": "MIT",
+  "author": "StemSplit",
+  "homepage": "https://stemsplit.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StemSplit/stemsplit-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/StemSplit/stemsplit-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "stemsplit",
+    "stem-separation",
+    "vocal-remover",
+    "audio",
+    "ai",
+    "claude",
+    "cursor"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "stemsplit-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier src tests --write",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.59.4",
+    "vitest": "^1.4.0"
+  }
+}
