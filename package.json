@@ -1,7 +1,7 @@
 {
   "name": "stemsplit-mcp",
   "version": "0.2.0",
-  "description": "MCP server for AI stem separation — remove vocals, isolate instrumentals, build karaoke tracks, or split audio into vocals, drums, bass, piano, guitar, and other stems from local files or YouTube URLs. Works in Claude Desktop, Cursor, Cline, Windsurf, Zed, and any Model Context Protocol client. Powered by StemSplit and Demucs.",
+  "description": "MCP server for AI stem separation — remove vocals, isolate instrumentals, build karaoke tracks, or split audio into vocals, drums, bass, piano, guitar, and other stems from local files, YouTube URLs, or SoundCloud tracks. Works in Claude Desktop, Cursor, Cline, Windsurf, Zed, and any Model Context Protocol client. Powered by StemSplit and Demucs.",
   "license": "MIT",
   "author": "StemSplit",
   "homepage": "https://github.com/StemSplit/stemsplit-mcp#readme",
@@ -45,9 +45,16 @@
     "htdemucs",
     "youtube",
     "youtube-mp3",
+    "youtube-vocal-remover",
+    "soundcloud",
+    "soundcloud-downloader",
+    "soundcloud-vocal-remover",
     "ai",
     "ai-audio",
-    "llm-tool"
+    "llm-tool",
+    "music-production",
+    "podcast-cleanup",
+    "speech-to-text-preprocessing"
   ],
   "type": "module",
   "main": "dist/index.js",
@@ -58,7 +65,9 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "glama.json",
+    "smithery.yaml"
   ],
   "engines": {
     "node": ">=20.0.0"
