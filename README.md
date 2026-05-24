@@ -12,11 +12,33 @@ Powered by the [StemSplit](https://stemsplit.io) API (HTDemucs / Demucs models o
 
 ## What you can do with this
 
+**Audio separation basics**
 - **Remove vocals from a song** — separate any MP3, WAV, or FLAC into vocals and instrumental
 - **Build a karaoke version of any track** — `/karaoke` slash command returns just the instrumental
-- **Isolate dialogue or vocals for transcription** — clean speech for podcast editing, interview cleanup, ML preprocessing
+- **Extract an acapella** — pull a clean vocal track for remixes, mashups, or re-arrangement
 - **Extract drums, bass, piano, or guitar** — split audio into up to six individual stems
 - **Process YouTube videos** — paste a `youtube.com` or `youtu.be` URL and get separated stems back
+
+**Audio production & post-production**
+- **Clean vocals before processing** — isolate vocals first, then pass to a de-esser, noise reducer, or pitch corrector without mix bleed affecting the result
+- **Stem delivery for mastering** — auto-generate per-stem exports from a final mix for a mastering engineer
+- **Adaptive game audio** — split a track so a game engine can fade individual layers (e.g. mute drums during quiet scenes)
+- **DJ acapella/instrumental packs** — batch-generate acapellas and instrumentals for live performance or DJ sets
+- **Sample chopping** — extract drums or bass for sample packs in hip-hop / electronic production
+
+**AI & developer pipelines**
+- **Vocals → transcription** — isolate vocals first, then feed to Whisper or any ASR model for significantly cleaner speech-to-text
+- **Lyrics generation** — vocals → transcription → synced lyrics file, fully automated in a single MCP chain
+- **Training data for AI music models** — generate clean separated stems from raw mixed tracks for fine-tuning or dataset building
+- **Content-ID / copyright checking** — extract vocals to fingerprint and match against a vocal database
+- **Per-stem audio visualizers** — drive instrument-reactive visualizers in video or web apps by separating stems first
+
+**Content & media**
+- **Podcast / interview cleanup** — strip music beds or background music from recorded dialogue
+- **Sync licensing** — instantly generate an instrumental version of a submitted track for a music supervisor
+- **Music education apps** — isolate individual instruments to build solo/mute practice tools or ear training exercises
+
+**Agentic workflows**
 - **Build audio agents in your IDE** — orchestrate stem separation from Cursor or Claude Desktop using natural language
 - **Batch process audio in MCP-driven pipelines** — chain stem separation with transcription, translation, or any other MCP tool
 
@@ -214,6 +236,24 @@ Cursor calls `separate_stems` with `outputType="SIX_STEMS"`, `quality="BEST"`, `
 > Get me the instrumental of `https://youtu.be/dQw4w9WgXcQ`.
 
 Claude calls `separate_youtube`, polls until COMPLETED, downloads `vocals.mp3` and `instrumental.mp3` to `~/Downloads/stemsplit/<jobId>/`, and returns the instrumental path.
+
+**Clean vocals for transcription (Claude Desktop):**
+
+> Transcribe the lyrics from `~/Music/interview-with-music.mp3` — there's a music bed underneath, clean it up first.
+
+Claude calls `separate_stems` with `outputType="VOCALS"` to strip the music bed, then passes `vocals.mp3` to a transcription tool (e.g. Whisper via another MCP server). The result is a clean transcript with none of the background music interfering.
+
+**Batch acapella extraction (Cursor agent):**
+
+> Extract acapellas from every MP3 in `./tracks/` and save them to `./acapellas/`.
+
+Cursor iterates the directory, calls `separate_stems` with `outputType="VOCALS"` and a custom `outputDir` per file, and returns a list of acapella paths ready for a remix session or AI training dataset.
+
+**Vocal isolation → stems for remix (Claude Desktop):**
+
+> I want to remix `~/Music/original.wav`. Give me the acapella and all the individual instrument stems separately.
+
+Claude calls `separate_stems` twice — once with `outputType="VOCALS"` for the clean acapella, once with `outputType="SIX_STEMS"` for the full stem pack — and hands back all seven file paths organized by stem type.
 
 ---
 
