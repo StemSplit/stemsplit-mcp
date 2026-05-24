@@ -4,6 +4,9 @@ import { withRetry, type RetryDecision } from './retry.js';
 import type {
   ApiErrorBody,
   BalanceResponse,
+  SoundcloudJobCreateResponse,
+  SoundcloudJobDetailResponse,
+  SoundcloudJobListResponse,
   StemJobCreateResponse,
   StemJobDetailResponse,
   StemJobListResponse,
@@ -241,5 +244,29 @@ export class StemSplitClient {
     if (params.offset !== undefined) search.set('offset', String(params.offset));
     const qs = search.toString();
     return this.request<YoutubeJobListResponse>('GET', `/youtube-jobs${qs ? `?${qs}` : ''}`);
+  }
+
+  async createSoundcloudJob(soundcloudUrl: string): Promise<SoundcloudJobCreateResponse> {
+    return this.request<SoundcloudJobCreateResponse>('POST', '/soundcloud-jobs', { soundcloudUrl });
+  }
+
+  async getSoundcloudJob(jobId: string): Promise<SoundcloudJobDetailResponse> {
+    return this.request<SoundcloudJobDetailResponse>(
+      'GET',
+      `/soundcloud-jobs/${encodeURIComponent(jobId)}`,
+    );
+  }
+
+  async listSoundcloudJobs(params: {
+    status?: StemJobStatus;
+    limit?: number;
+    offset?: number;
+  }): Promise<SoundcloudJobListResponse> {
+    const search = new URLSearchParams();
+    if (params.status) search.set('status', params.status);
+    if (params.limit !== undefined) search.set('limit', String(params.limit));
+    if (params.offset !== undefined) search.set('offset', String(params.offset));
+    const qs = search.toString();
+    return this.request<SoundcloudJobListResponse>('GET', `/soundcloud-jobs${qs ? `?${qs}` : ''}`);
   }
 }

@@ -19,7 +19,7 @@ export const separateStemsInput = {
     .string()
     .min(1)
     .describe(
-      'Local absolute path (e.g. /Users/me/song.mp3 or ~/Music/song.wav) or direct audio URL (https://...). Do NOT pass YouTube/SoundCloud URLs here — use separate_youtube for YouTube.',
+      'Local absolute path (e.g. /Users/me/song.mp3 or ~/Music/song.wav) or direct audio URL (https://...). Do NOT pass YouTube or SoundCloud URLs here — use separate_youtube for YouTube, separate_soundcloud for SoundCloud.',
     ),
   outputType: outputTypeEnum
     .optional()

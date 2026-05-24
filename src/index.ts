@@ -12,9 +12,15 @@ import {
 } from './tools/download-stems.js';
 import { getBalanceToolDef, runGetBalance } from './tools/get-balance.js';
 import { getJobToolDef, runGetJob } from './tools/get-job.js';
+import { getSoundcloudJobToolDef, runGetSoundcloudJob } from './tools/get-soundcloud-job.js';
 import { getYoutubeJobToolDef, runGetYoutubeJob } from './tools/get-youtube-job.js';
 import { listJobsToolDef, runListJobs } from './tools/list-jobs.js';
+import { listSoundcloudJobsToolDef, runListSoundcloudJobs } from './tools/list-soundcloud-jobs.js';
 import { listYoutubeJobsToolDef, runListYoutubeJobs } from './tools/list-youtube-jobs.js';
+import {
+  runSeparateSoundcloud,
+  separateSoundcloudToolDef,
+} from './tools/separate-soundcloud.js';
 import {
   runSeparateStems,
   separateStemsToolDef,
@@ -40,10 +46,13 @@ interface ToolRegistration {
 const TOOLS: ToolRegistration[] = [
   { name: 'separate_stems', def: separateStemsToolDef, handler: runSeparateStems },
   { name: 'separate_youtube', def: separateYoutubeToolDef, handler: runSeparateYoutube },
+  { name: 'separate_soundcloud', def: separateSoundcloudToolDef, handler: runSeparateSoundcloud },
   { name: 'get_job', def: getJobToolDef, handler: runGetJob },
   { name: 'list_jobs', def: listJobsToolDef, handler: runListJobs },
   { name: 'get_youtube_job', def: getYoutubeJobToolDef, handler: runGetYoutubeJob },
   { name: 'list_youtube_jobs', def: listYoutubeJobsToolDef, handler: runListYoutubeJobs },
+  { name: 'get_soundcloud_job', def: getSoundcloudJobToolDef, handler: runGetSoundcloudJob },
+  { name: 'list_soundcloud_jobs', def: listSoundcloudJobsToolDef, handler: runListSoundcloudJobs },
   { name: 'get_balance', def: getBalanceToolDef, handler: runGetBalance },
   { name: 'download_stems', def: downloadStemsToolDef, handler: runDownloadStems },
 ];
@@ -205,6 +214,25 @@ async function main(): Promise<void> {
     },
   );
 
+  server.registerResource(
+    'soundcloud-job',
+    new ResourceTemplate('stemsplit://soundcloud-jobs/{jobId}', { list: undefined }),
+    {
+      title: 'SoundCloud Job Detail',
+      description: 'Latest snapshot of a single SoundCloud job, including fresh download URLs.',
+      mimeType: 'application/json',
+    },
+    async (uri, { jobId }) => {
+      const id = Array.isArray(jobId) ? jobId[0] : jobId;
+      const job = await client.getSoundcloudJob(id as string);
+      return {
+        contents: [
+          { uri: uri.href, mimeType: 'application/json', text: JSON.stringify(job, null, 2) },
+        ],
+      };
+    },
+  );
+
   server.registerPrompt(
     'karaoke',
     {
@@ -281,6 +309,26 @@ async function main(): Promise<void> {
           content: {
             type: 'text',
             text: `Use separate_youtube with youtubeUrl="${youtubeUrl}". Return the local path to the instrumental stem once it completes.`,
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    'soundcloud_instrumental',
+    {
+      title: 'Make an Instrumental from a SoundCloud Track',
+      description: 'Submit a SoundCloud URL and return a local path to the instrumental (no vocals).',
+      argsSchema: { soundcloudUrl: z.string().describe('SoundCloud track URL') },
+    },
+    ({ soundcloudUrl }) => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `Use separate_soundcloud with soundcloudUrl="${soundcloudUrl}". Return the local path to the instrumental stem once it completes.`,
           },
         },
       ],

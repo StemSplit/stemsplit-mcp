@@ -193,6 +193,63 @@ export interface YoutubeJobListResponse {
   pagination: Pagination;
 }
 
+export interface SoundcloudJobCreateResponse {
+  id: string;
+  status: StemJobStatus;
+  trackId: string;
+  trackTitle: string;
+  trackDuration: number;
+  trackDurationEstimated: boolean;
+  trackArtwork: string | null;
+  artistName: string;
+  creditsRequired: number;
+  outputs: ['vocals', 'instrumental'];
+  createdAt: string;
+  note?: string;
+}
+
+export interface SoundcloudJobDetailResponse {
+  id: string;
+  status: StemJobStatus;
+  progress: number;
+  progressPhase?: string | null;
+  soundcloudUrl: string;
+  trackId: string;
+  trackTitle: string;
+  trackDuration: number;
+  trackArtwork: string | null;
+  artistName: string;
+  creditsCharged: number;
+  createdAt: string;
+  completedAt: string | null;
+  errorMessage?: string;
+  outputs?: {
+    fullAudio?: StemOutput;
+    vocals?: StemOutput;
+    instrumental?: StemOutput;
+  };
+}
+
+export interface SoundcloudJobListItem {
+  id: string;
+  status: StemJobStatus;
+  progress: number;
+  trackId: string;
+  trackTitle: string;
+  trackDuration: number;
+  trackArtwork: string | null;
+  artistName: string;
+  creditsCharged: number;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface SoundcloudJobListResponse {
+  jobs: SoundcloudJobListItem[];
+  pagination: Pagination;
+}
+
 export interface BalanceResponse {
   balanceSeconds: number;
   balanceMinutes: number;

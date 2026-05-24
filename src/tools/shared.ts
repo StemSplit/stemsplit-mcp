@@ -40,6 +40,8 @@ export interface SourceClassification {
 const YOUTUBE_HOST_PATTERN =
   /(?:^|\.)(?:youtube\.com|youtu\.be|youtube-nocookie\.com|m\.youtube\.com)$/i;
 
+const SOUNDCLOUD_HOST_PATTERN = /(?:^|\.)(?:soundcloud\.com|on\.soundcloud\.com)$/i;
+
 function isTildeHome(path: string): boolean {
   return path === '~' || path.startsWith('~/');
 }
@@ -60,6 +62,11 @@ export function classifySource(source: string): SourceClassification {
     if (YOUTUBE_HOST_PATTERN.test(url.hostname)) {
       throw new Error(
         'YouTube URLs are not accepted by separate_stems. Use the separate_youtube tool instead.',
+      );
+    }
+    if (SOUNDCLOUD_HOST_PATTERN.test(url.hostname)) {
+      throw new Error(
+        'SoundCloud URLs are not accepted by separate_stems. Use the separate_soundcloud tool instead.',
       );
     }
     return { kind: 'url', value: trimmed };

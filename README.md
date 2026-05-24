@@ -63,12 +63,14 @@ Powered by the [StemSplit](https://stemsplit.io) API (HTDemucs / Demucs models o
 |------|----------|
 | `separate_stems` | Upload a local audio file or pass a direct audio URL; get back local file paths to the separated stems |
 | `separate_youtube` | Submit a YouTube URL; get back local file paths to the vocals and instrumental stems |
+| `separate_soundcloud` | Submit a SoundCloud track URL; get back local file paths to the vocals and instrumental stems |
 | `get_job` / `list_jobs` | Inspect existing stem jobs |
 | `get_youtube_job` / `list_youtube_jobs` | Inspect existing YouTube jobs |
+| `get_soundcloud_job` / `list_soundcloud_jobs` | Inspect existing SoundCloud jobs |
 | `get_balance` | Check remaining StemSplit credits |
 | `download_stems` | Re-download outputs from a completed job (re-mints fresh 1-hour presigned URLs) |
 
-Plus four ready-made prompts (slash commands): `karaoke`, `isolate_dialogue`, `sampler_pack`, `youtube_instrumental`.
+Plus five ready-made prompts (slash commands): `karaoke`, `isolate_dialogue`, `sampler_pack`, `youtube_instrumental`, `soundcloud_instrumental`.
 
 ---
 
@@ -198,6 +200,7 @@ Read-only context the LLM can pull on demand.
 | `stemsplit://jobs/recent` | The 20 most recent stem jobs |
 | `stemsplit://jobs/{jobId}` | Detail snapshot with fresh download URLs |
 | `stemsplit://youtube-jobs/{jobId}` | YouTube job detail with fresh URLs |
+| `stemsplit://soundcloud-jobs/{jobId}` | SoundCloud job detail with fresh URLs |
 
 ---
 
@@ -209,6 +212,7 @@ Read-only context the LLM can pull on demand.
 | `isolate_dialogue` | `source` | Run `separate_stems` (`VOCALS`) for podcast cleanup or transcription prep |
 | `sampler_pack` | `source` | Run `separate_stems` (`SIX_STEMS`, `BEST`) and list every stem path |
 | `youtube_instrumental` | `youtubeUrl` | Run `separate_youtube` and hand back the instrumental path |
+| `soundcloud_instrumental` | `soundcloudUrl` | Run `separate_soundcloud` and hand back the instrumental path |
 
 ---
 
@@ -257,11 +261,97 @@ Claude calls `separate_stems` twice — once with `outputType="VOCALS"` for the 
 
 ---
 
+## YouTube stem separation
+
+Use `separate_youtube` (or the `/youtube_instrumental` slash command) to extract vocals and an instrumental from any YouTube video.
+
+```json
+{
+  "youtubeUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+}
+```
+
+**Accepted URL formats**
+
+| Format | Example |
+|--------|---------|
+| Standard watch URL | `https://www.youtube.com/watch?v=VIDEO_ID` |
+| Short URL | `https://youtu.be/VIDEO_ID` |
+| Embed URL | `https://www.youtube.com/embed/VIDEO_ID` |
+| Mobile URL | `https://m.youtube.com/watch?v=VIDEO_ID` |
+| Bare video ID | `dQw4w9WgXcQ` (11 characters) |
+
+**Limits**
+
+- Maximum duration: 60 minutes
+- Output: vocals + instrumental, MP3, BEST quality (fixed)
+- Credits: 1 credit = 1 second of video
+
+**Example (Claude Desktop)**
+
+> Get me the instrumental of `https://youtu.be/dQw4w9WgXcQ`.
+
+Claude calls `separate_youtube`, polls until COMPLETED (~60s for a 3-minute video), and returns:
+
+```
+Done. Files saved to ~/Downloads/stemsplit/<jobId>/
+  vocals.mp3
+  instrumental.mp3
+```
+
+---
+
+## SoundCloud stem separation
+
+Use `separate_soundcloud` (or the `/soundcloud_instrumental` slash command) to extract vocals and an instrumental from any public SoundCloud track.
+
+```json
+{
+  "soundcloudUrl": "https://soundcloud.com/artist/track-name"
+}
+```
+
+**Accepted URL formats**
+
+| Format | Example |
+|--------|---------|
+| Standard track URL | `https://soundcloud.com/artist/track-name` |
+| Mobile URL | `https://m.soundcloud.com/artist/track-name` |
+| Short URL | `https://on.soundcloud.com/AbCdE` |
+
+**Limits**
+
+- Maximum duration: 15 minutes
+- Must be a public track (private tracks and sets/playlists are not supported)
+- Output: vocals + instrumental, MP3, BEST quality (fixed)
+- Credits: 1 credit = 1 second of audio. When track duration is unknown at submission, 4 minutes (240 credits) is held and reconciled on completion.
+
+**Example (Claude Desktop)**
+
+> Remove the vocals from `https://soundcloud.com/artist/my-track`.
+
+Claude calls `separate_soundcloud`, polls until COMPLETED, and returns:
+
+```
+Done. Files saved to ~/Downloads/stemsplit/<jobId>/
+  vocals.mp3
+  instrumental.mp3
+```
+
+**Example (Cursor agent)**
+
+> Extract the acapella from every SoundCloud URL in `./tracks.txt` and save each to `./acapellas/`.
+
+Cursor reads the file, iterates the URLs, calls `separate_soundcloud` with `outputDir` set per track, and returns a list of all saved acapella paths.
+
+---
+
 ## Supported inputs
 
 - **Local files:** `mp3`, `wav`, `flac`, `m4a`, `ogg`, `webm`, `aac`, `wma`
 - **Direct URLs:** any public `https://` URL serving one of the formats above (the StemSplit API fetches it server-side)
 - **YouTube:** `youtube.com/watch?v=...`, `youtu.be/...`, `youtube-nocookie.com/embed/...`, or a bare 11-character video ID
+- **SoundCloud:** `soundcloud.com/artist/track`, `m.soundcloud.com/artist/track`, or `on.soundcloud.com/shortcode` (public tracks only, max 15 minutes)
 
 **Limits:** 100 MB / 60 minutes per file. 1 credit = 1 second of audio. Credits are deducted at job submission.
 
@@ -278,6 +368,8 @@ Claude calls `separate_stems` twice — once with `outputType="VOCALS"` for the 
 | `[FILE_TOO_LARGE]` / `[AUDIO_TOO_LONG]` | Trim or compress the file. Limits are 100 MB and 60 minutes |
 | `[POLL_TIMEOUT]` | Increase `timeoutSeconds` on the tool call or set `wait: false` and poll `get_job` separately |
 | YouTube URL passed to `separate_stems` | Use `separate_youtube` instead |
+| SoundCloud URL passed to `separate_stems` | Use `separate_soundcloud` instead |
+| `[TRACK_NOT_FOUND]` on SoundCloud job | Track is private, a playlist/set, or unavailable. Only public single tracks are supported |
 
 ---
 
@@ -371,4 +463,4 @@ MIT (c) 2026 StemSplit
 
 ## Keywords
 
-stem separation MCP, vocal remover MCP, karaoke generator MCP, Claude Desktop audio, Cursor audio tools, instrumental extractor, acapella extractor, AI stem splitter, MCP audio server, remove vocals from MP3, isolate vocals, split audio into stems, YouTube vocal remover, HTDemucs MCP, Demucs MCP, MCP server for stem separation.
+stem separation MCP, vocal remover MCP, karaoke generator MCP, Claude Desktop audio, Cursor audio tools, instrumental extractor, acapella extractor, AI stem splitter, MCP audio server, remove vocals from MP3, isolate vocals, split audio into stems, YouTube vocal remover, SoundCloud vocal remover, SoundCloud stem separator, SoundCloud instrumental extractor, HTDemucs MCP, Demucs MCP, MCP server for stem separation.

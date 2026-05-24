@@ -1,6 +1,6 @@
 import type { StemSplitClient } from './client.js';
 import { StemSplitError } from './errors.js';
-import type { StemJobDetailResponse, YoutubeJobDetailResponse } from './types.js';
+import type { SoundcloudJobDetailResponse, StemJobDetailResponse, YoutubeJobDetailResponse } from './types.js';
 import { isTerminalStatus } from './types.js';
 
 export interface PollOptions {
@@ -72,6 +72,14 @@ export async function pollYoutubeJob(
   options: PollOptions,
 ): Promise<YoutubeJobDetailResponse> {
   return pollUntilTerminal(() => client.getYoutubeJob(jobId), jobId, options);
+}
+
+export async function pollSoundcloudJob(
+  client: StemSplitClient,
+  jobId: string,
+  options: PollOptions,
+): Promise<SoundcloudJobDetailResponse> {
+  return pollUntilTerminal(() => client.getSoundcloudJob(jobId), jobId, options);
 }
 
 export function assertJobCompleted(job: {
