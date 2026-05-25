@@ -3,6 +3,7 @@
 [![npm](https://img.shields.io/npm/v/stemsplit-mcp)](https://www.npmjs.com/package/stemsplit-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/stemsplit-mcp)](https://www.npmjs.com/package/stemsplit-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![stemsplit-mcp MCP server](https://glama.ai/mcp/servers/StemSplit/stemsplit-mcp/badges/score.svg)](https://glama.ai/mcp/servers/StemSplit/stemsplit-mcp)
 
 **AI stem separation as a Model Context Protocol (MCP) server.** Remove vocals, build karaoke tracks, isolate dialogue, or split any song into vocals, drums, bass, piano, guitar, and other stems — directly from Claude Desktop, Cursor, Cline, Windsurf, Zed, or any other MCP-compatible client. Works with local audio files (MP3, WAV, FLAC, M4A, OGG, AAC) and YouTube URLs.
 
